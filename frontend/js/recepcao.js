@@ -2,6 +2,7 @@ let currentUser = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     currentUser = getUser();
+    // Proteção de rota
     if (!currentUser) {
         window.location.href = '../index.html';
         return;
@@ -9,9 +10,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     configurarNavbar('../index.html');
 
-    if (currentUser.perfil === 'Admin') {
-        const adminActions = document.getElementById('admin-actions');
-        if (adminActions) adminActions.classList.remove('d-none');
+    // Exibe o botão de voltar apenas se o perfil for 'Admin'
+    const adminActions = document.getElementById('admin-actions');
+    if (adminActions && currentUser.perfil === 'Admin') {
+        adminActions.classList.remove('d-none');
+    } else if (adminActions) {
+        adminActions.classList.add('d-none');
     }
 
     buscarConvidados('');
@@ -33,19 +37,20 @@ async function buscarConvidados(termo) {
         }
 
         convidados.forEach(c => {
+            // Contagem segura dos acompanhantes
             const numAcompanhantes = Array.isArray(c.acompanhantes) ? c.acompanhantes.length : 0;
 
-            // Estilo do badge baseado em ter ou não acompanhantes
+            // Lógica de cor: Azul (bg-info) se houver acompanhantes, Cinza (bg-light) se não houver
             const badgeClass = numAcompanhantes > 0 ? 'bg-info text-dark' : 'bg-light text-secondary border';
 
-            // Texto para o Tooltip (ao passar o mouse)
+            // Tooltip em Português BR
             const nomesTooltip = numAcompanhantes > 0
                 ? c.acompanhantes.map(a => `${a.nome} ${a.sobrenome}`).join(', ')
                 : 'Nenhum acompanhante';
 
             const jaEntrou = c.ja_entrou === 1;
             const btnClass = jaEntrou ? 'btn-secondary' : 'btn-success';
-            const btnText = jaEntrou ? 'Entrada Registada' : '<i class="bi bi-check2-circle"></i> Confirmar Entrada';
+            const btnText = jaEntrou ? 'Entrada Registrada' : '<i class="bi bi-check2-circle"></i> Confirmar Entrada';
             const btnDisabled = jaEntrou ? 'disabled' : '';
 
             tbody.innerHTML += `
@@ -54,7 +59,7 @@ async function buscarConvidados(termo) {
                     <td>${c.cpf || 'N/A'}</td>
                     <td><span class="badge bg-secondary fs-6">Mesa ${c.numero_mesa}</span></td>
                     <td class="text-center">
-                        <span class="badge ${badgeClass} fs-6" title="${nomesTooltip}" style="cursor: help; padding: 8px 12px;">
+                        <span class="badge ${badgeClass} fs-6" title="${nomesTooltip}" style="cursor: help;">
                             <i class="bi bi-people-fill"></i> ${numAcompanhantes}
                         </span>
                     </td>
@@ -76,20 +81,22 @@ async function efetuarCheckin(id_convidado, btnElement) {
 
     btnElement.disabled = true;
     const originalContent = btnElement.innerHTML;
-    btnElement.innerHTML = "A processar...";
+    btnElement.innerHTML = "Processando...";
+
+    const userId = currentUser.id_usuario || currentUser.id;
 
     try {
         const response = await fetch(`${API_CHECKINS}/checkin`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_usuario: currentUser.id_usuario || currentUser.id, id_convidado: id_convidado })
+            body: JSON.stringify({ id_usuario: userId, id_convidado: id_convidado })
         });
 
         const result = await response.json();
 
         if (response.ok) {
             btnElement.classList.replace('btn-success', 'btn-secondary');
-            btnElement.innerHTML = "Entrada Registada";
+            btnElement.innerHTML = "Entrada Registrada";
         } else if (response.status === 409) {
             btnElement.classList.replace('btn-success', 'btn-warning');
             btnElement.innerHTML = "Já efetuou check-in";

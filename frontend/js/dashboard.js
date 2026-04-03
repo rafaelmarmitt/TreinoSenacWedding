@@ -93,16 +93,16 @@ async function carregarConvidadosAdmin() {
         if (!response.ok) throw new Error("Erro na rede");
 
         convidadosCache = await response.json();
-
         const tbody = document.getElementById('tabela-convidados-admin');
         if (!tbody) return;
         tbody.innerHTML = '';
 
         convidadosCache.forEach(c => {
+            // MOSTRAR ACOMPANHANTES ABAIXO DO NOME (COMO NO VÍDEO)
             let textoAcompanhantes = '';
             if (c.acompanhantes && c.acompanhantes.length > 0) {
                 const nomes = c.acompanhantes.map(a => `${a.nome} ${a.sobrenome}`).join(', ');
-                textoAcompanhantes = `<br><small class="text-muted"><i class="bi bi-people"></i> ${nomes}</small>`;
+                textoAcompanhantes = `<br><small class="text-muted"><i class="bi bi-people-fill"></i> ${nomes}</small>`;
             }
 
             const tr = document.createElement('tr');
@@ -263,44 +263,110 @@ async function cadastrarConvidado(e) {
 }
 
 /**
- * Gera PDF
- */
-function gerarPDF() {
-    if (convidadosCache.length === 0) { alert("Sem dados para exportar."); return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("Relatório de Convidados - Wedding Pass", 14, 22);
-    doc.setFontSize(11);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 30);
-    const tableColumn = ["Nome Completo", "CPF", "Telefone", "Mesa"];
-    const tableRows = convidadosCache.map(c => [
-        `${c.nome} ${c.sobrenome}`,
-        c.cpf || "N/A",
-        c.telefone || "N/A",
-        c.numero_mesa ? c.numero_mesa.toString() : "N/A"
-    ]);
-    doc.autoTable({
-        head: [tableColumn],
-        body: tableRows,
-        startY: 40,
-        theme: 'striped',
-        headStyles: { fillColor: [214, 51, 132] }
-    });
-    doc.save("Lista_Convidados_WeddingPass.pdf");
-}
-
-/**
  * Filtro de busca na tabela
  */
 const inputBusca = document.getElementById('busca-dashboard');
 if (inputBusca) {
     inputBusca.addEventListener('input', function (e) {
         const termo = e.target.value.toLowerCase();
-        const linhas = document.querySelectorAll('#tabela-convidados-admin tr');
-        linhas.forEach(linha => {
-            const textoLinha = linha.innerText.toLowerCase();
-            linha.style.display = textoLinha.includes(termo) ? '' : 'none';
+        document.querySelectorAll('#tabela-convidados-admin tr').forEach(linha => {
+            linha.style.display = linha.innerText.toLowerCase().includes(termo) ? '' : 'none';
         });
     });
 }
+
+/**
+ * GERAÇÃO DE PDF MELHORADA
+ * Inclui: Status colorido, Acompanhantes e Resumo de Presença
+ */
+window.gerarPDF = function () {
+    if (convidadosCache.length === 0) {
+        alert("Sem dados para exportar.");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Cálculos para o resumo
+    const total = convidadosCache.length;
+    const presentes = convidadosCache.filter(c => c.ja_entrou).length;
+    const ausentes = total - presentes;
+    const perc = total > 0 ? ((presentes / total) * 100).toFixed(1) : 0;
+
+    // Título e Estilo Inicial
+    doc.setFontSize(20);
+    doc.setTextColor(214, 51, 132); // Cor Wedding Pass
+    doc.text("Relatório de Convidados - Wedding Pass", 14, 20);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Data do Relatório: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+
+    // Bloco de Resumo Executivo
+    doc.setDrawColor(200);
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(14, 35, 182, 25, 3, 3, 'FD');
+
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text(`Total de Convidados: ${total}`, 20, 42);
+    doc.text(`Compareceram: ${presentes}`, 20, 48);
+    doc.text(`Ausentes: ${ausentes}`, 20, 54);
+
+    doc.setFontSize(14);
+    doc.setTextColor(25, 135, 84); // Verde
+    doc.text(`${perc}% de Presença`, 140, 50);
+
+    // Configuração da Tabela
+    const tableColumn = ["Convidado (e Acompanhantes)", "Mesa", "Status"];
+    const tableRows = convidadosCache.map(c => {
+        // Formata nome + acompanhantes para a célula
+        let nomeCelula = `${c.nome} ${c.sobrenome}`;
+        if (c.acompanhantes && c.acompanhantes.length > 0) {
+            const nomesAcomp = c.acompanhantes.map(a => `- ${a.nome} ${a.sobrenome}`).join('\n');
+            nomeCelula += `\n${nomesAcomp}`;
+        }
+
+        return [
+            nomeCelula,
+            `Mesa ${c.numero_mesa}`,
+            c.ja_entrou ? "PRESENTE" : "AUSENTE"
+        ];
+    });
+
+    doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 65,
+        theme: 'grid',
+        headStyles: { fillColor: [214, 51, 132], halign: 'center' },
+        columnStyles: {
+            0: { cellWidth: 100 },
+            1: { halign: 'center' },
+            2: { halign: 'center', fontStyle: 'bold' }
+        },
+        // Lógica para colorir a célula de Status (Verde/Vermelho)
+        didParseCell: function (data) {
+            if (data.section === 'body' && data.column.index === 2) {
+                if (data.cell.raw === "PRESENTE") {
+                    data.cell.styles.textColor = [25, 135, 84];
+                } else {
+                    data.cell.styles.textColor = [220, 53, 69];
+                }
+            }
+        },
+        styles: { fontSize: 9, cellPadding: 3 }
+    });
+
+    // Rodapé
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Página ${i} de ${pageCount} - Wedding Pass Sistema de Gestão`, 14, doc.internal.pageSize.height - 10);
+    }
+
+    doc.save(`WeddingPass_Relatorio_Evento_${new Date().getTime()}.pdf`);
+};

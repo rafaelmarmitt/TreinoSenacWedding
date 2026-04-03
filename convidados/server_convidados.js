@@ -21,7 +21,6 @@ app.get('/convidados', async (req, res) => {
     try {
         const connection = await mysql.createConnection(dbConfig);
 
-        // CORREÇÃO: Consulta cruza informações com o banco de check-ins para saber se já entrou
         let query = `
             SELECT c.*, EXISTS(SELECT 1 FROM db_checkins.checkins ch WHERE ch.id_convidado = c.id_convidado) AS ja_entrou
             FROM convidados c
@@ -40,10 +39,7 @@ app.get('/convidados', async (req, res) => {
             params = [termoBusca, termoBusca, termoBusca];
         }
 
-        // Busca os convidados principais com o status de check-in embutido
         const [convidados] = await connection.execute(query, params);
-
-        // Garantir conversão absoluta para objeto JavaScript puro e adicionar acompanhantes
         const convidadosCompletos = [];
 
         for (let convidado of convidados) {
@@ -51,17 +47,12 @@ app.get('/convidados', async (req, res) => {
                 'SELECT nome, sobrenome FROM acompanhantes WHERE fk_convidado = ?',
                 [convidado.id_convidado]
             );
-
-            // Converte o objeto "trancado" do MySQL para um objeto JavaScript normal
             const convidadoObj = Object.assign({}, convidado);
             convidadoObj.acompanhantes = acompanhantes;
-
             convidadosCompletos.push(convidadoObj);
         }
 
         await connection.end();
-
-        // Enviamos o novo array completo para o front-end
         res.json(convidadosCompletos);
     } catch (error) {
         console.error('Erro ao listar convidados:', error);
@@ -76,20 +67,15 @@ app.post('/convidados', async (req, res) => {
 
     try {
         connection = await mysql.createConnection(dbConfig);
-
-        // Inicia uma transação (salva tudo ou cancela tudo em caso de erro)
         await connection.beginTransaction();
 
-        // 1. Insere o Convidado Principal
         const [result] = await connection.execute(
             'INSERT INTO convidados (nome, sobrenome, cpf, telefone, email, numero_mesa) VALUES (?, ?, ?, ?, ?, ?)',
             [nome, sobrenome, cpf || null, telefone || null, email || null, numero_mesa]
         );
         const idConvidado = result.insertId;
 
-        // 2. Insere os Acompanhantes (se existirem na requisição)
         if (acompanhantes && acompanhantes.length > 0) {
-            console.log(`[Convidados] A guardar ${acompanhantes.length} acompanhante(s) para ${nome} ${sobrenome}...`);
             for (let acomp of acompanhantes) {
                 await connection.execute(
                     'INSERT INTO acompanhantes (nome, sobrenome, fk_convidado) VALUES (?, ?, ?)',
@@ -98,32 +84,84 @@ app.post('/convidados', async (req, res) => {
             }
         }
 
-        // Confirma a transação no banco de dados
         await connection.commit();
-
-        console.log(`[Convidados] Sucesso! Convidado ${idConvidado} registado.`);
-        res.status(201).json({ mensagem: 'Convidado e acompanhantes registados com sucesso!', id: idConvidado });
+        res.status(201).json({ mensagem: 'Convidado registado!', id: idConvidado });
     } catch (error) {
-        if (connection) await connection.rollback(); // Desfaz alterações em caso de erro
-        console.error('Erro detalhado ao registar convidado:', error);
-        res.status(500).json({ erro: 'Erro ao registar convidado. Verifique os dados (ex: CPF duplicado).', detalhe: error.message });
+        if (connection) await connection.rollback();
+        res.status(500).json({ erro: 'Erro ao registar convidado.' });
     } finally {
-        if (connection) await connection.end(); // Fecha a conexão
+        if (connection) await connection.end();
     }
 });
 
-// Obter os acompanhantes de um convidado específico (Rota Auxiliar)
-app.get('/convidados/:id/acompanhantes', async (req, res) => {
+// ==========================================
+// ROTA DE EDIÇÃO (CORRIGIDA)
+// ==========================================
+app.put('/convidados/:id', async (req, res) => {
+    const { id } = req.params;
+    const { nome, sobrenome, cpf, telefone, email, numero_mesa, acompanhantes } = req.body;
+    let connection;
+
     try {
-        const connection = await mysql.createConnection(dbConfig);
-        const [rows] = await connection.execute(
-            'SELECT * FROM acompanhantes WHERE fk_convidado = ?',
-            [req.params.id]
+        connection = await mysql.createConnection(dbConfig);
+        await connection.beginTransaction();
+
+        // 1. Atualiza dados do convidado principal
+        await connection.execute(
+            'UPDATE convidados SET nome=?, sobrenome=?, cpf=?, telefone=?, email=?, numero_mesa=? WHERE id_convidado=?',
+            [nome, sobrenome, cpf || null, telefone || null, email || null, numero_mesa, id]
         );
-        await connection.end();
-        res.json(rows);
+
+        // 2. Sincroniza acompanhantes: Remove os antigos e insere os novos
+        // (Estratégia mais segura para lidar com edições dinâmicas na tabela)
+        await connection.execute('DELETE FROM acompanhantes WHERE fk_convidado = ?', [id]);
+
+        if (acompanhantes && acompanhantes.length > 0) {
+            for (let acomp of acompanhantes) {
+                await connection.execute(
+                    'INSERT INTO acompanhantes (nome, sobrenome, fk_convidado) VALUES (?, ?, ?)',
+                    [acomp.nome, acomp.sobrenome, id]
+                );
+            }
+        }
+
+        await connection.commit();
+        res.json({ mensagem: 'Convidado atualizado com sucesso!' });
     } catch (error) {
-        res.status(500).json({ erro: 'Erro ao obter acompanhantes.' });
+        if (connection) await connection.rollback();
+        console.error('Erro ao editar:', error);
+        res.status(500).json({ erro: 'Erro ao atualizar convidado.' });
+    } finally {
+        if (connection) await connection.end();
+    }
+});
+
+// ==========================================
+// ROTA DE EXCLUSÃO (CORRIGIDA)
+// ==========================================
+app.delete('/convidados/:id', async (req, res) => {
+    const { id } = req.params;
+    let connection;
+
+    try {
+        connection = await mysql.createConnection(dbConfig);
+        await connection.beginTransaction();
+
+        // Devido às chaves estrangeiras (FK), devemos remover os acompanhantes primeiro
+        // (Ou configurar ON DELETE CASCADE no MySQL)
+        await connection.execute('DELETE FROM acompanhantes WHERE fk_convidado = ?', [id]);
+        
+        // Remove o convidado
+        await connection.execute('DELETE FROM convidados WHERE id_convidado = ?', [id]);
+
+        await connection.commit();
+        res.json({ mensagem: 'Convidado removido com sucesso!' });
+    } catch (error) {
+        if (connection) await connection.rollback();
+        console.error('Erro ao excluir:', error);
+        res.status(500).json({ erro: 'Erro ao excluir convidado.' });
+    } finally {
+        if (connection) await connection.end();
     }
 });
 
