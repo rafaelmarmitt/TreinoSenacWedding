@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Check-in - Wedding Pass</title>
+    <!-- Links limpos -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
         rel="stylesheet">
@@ -28,7 +29,7 @@
     <div class="container mt-4">
         <h2 class="mb-4">Recepção - Controlo de Entrada</h2>
 
-        <!-- Botão para voltar ao dashboard visível apenas para admin (gerido no js) -->
+        <!-- Botão para voltar ao dashboard visível apenas para admin -->
         <div id="admin-actions" class="mb-3 d-none">
             <a href="../admin/dashboard.html" class="btn btn-outline-secondary">← Voltar ao Dashboard</a>
         </div>
@@ -47,6 +48,8 @@
                         <th>Nome Completo</th>
                         <th>CPF</th>
                         <th>Mesa</th>
+                        <!-- NOVA COLUNA PARA OS ACOMPANHANTES -->
+                        <th class="text-center">Acompanhantes</th>
                         <th class="text-center">Ação (Check-in)</th>
                     </tr>
                 </thead>
