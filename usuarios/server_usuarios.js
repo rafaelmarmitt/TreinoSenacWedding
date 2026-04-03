@@ -23,7 +23,6 @@ const dbConfig = {
 // ==========================================
 async function inicializarBancoDeDados() {
 <<<<<<< HEAD
-<<<<<<< HEAD
     try {
         const connection = await mysql.createConnection(dbConfig);
 
@@ -111,8 +110,6 @@ app.get('/convidados', async (req, res) => {
     const { busca } = req.query;
 =======
 >>>>>>> parent of 8eb613d (commit das atualizações de QOL do sistema, ainda precisa ajustar a parte de edição e exclusão do sistema)
-=======
->>>>>>> parent of 8eb613d (commit das atualizações de QOL do sistema, ainda precisa ajustar a parte de edição e exclusão do sistema)
     try {
         const connection = await mysql.createConnection(dbConfig);
 
@@ -195,7 +192,6 @@ app.post('/login', async (req, res) => {
 const PORT = process.env.PORT || 3001;
 
 <<<<<<< HEAD
-<<<<<<< HEAD
 /// ... (mantenha os requires e configurações do dbConfig iniciais)
 
 // EDITAR CONVIDADO E SEUS ACOMPANHANTES (PUT)
@@ -243,16 +239,11 @@ app.listen(PORT, () => {
 =======
 =======
 >>>>>>> parent of 8eb613d (commit das atualizações de QOL do sistema, ainda precisa ajustar a parte de edição e exclusão do sistema)
-=======
->>>>>>> parent of 8eb613d (commit das atualizações de QOL do sistema, ainda precisa ajustar a parte de edição e exclusão do sistema)
 inicializarBancoDeDados().then(() => {
     app.listen(PORT, () => {
         console.log(`[Usuários] Servidor a correr na porta ${PORT}`);
     });
 <<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> parent of 8eb613d (commit das atualizações de QOL do sistema, ainda precisa ajustar a parte de edição e exclusão do sistema)
-=======
 >>>>>>> parent of 8eb613d (commit das atualizações de QOL do sistema, ainda precisa ajustar a parte de edição e exclusão do sistema)
 =======
 >>>>>>> parent of 8eb613d (commit das atualizações de QOL do sistema, ainda precisa ajustar a parte de edição e exclusão do sistema)
