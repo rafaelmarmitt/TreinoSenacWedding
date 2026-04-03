@@ -2,15 +2,15 @@ let currentUser = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     currentUser = getUser();
-    // Proteção de rota
+    // Proteção de rota (Admin ou Cerimonialista podem aceder)
     if (!currentUser) {
         window.location.href = '../index.html';
         return;
     }
 
     configurarNavbar('../index.html');
-
-    if (currentUser.perfil === 'Admin') {
+    
+    if(currentUser.perfil === 'Admin') {
         document.getElementById('admin-actions').classList.remove('d-none');
     }
 
@@ -22,44 +22,24 @@ async function buscarConvidados(termo) {
         const url = termo ? `${API_CONVIDADOS}/convidados?busca=${encodeURIComponent(termo)}` : `${API_CONVIDADOS}/convidados`;
         const response = await fetch(url);
         const convidados = await response.json();
-
+        
         const tbody = document.getElementById('tabela-recepcao');
         tbody.innerHTML = '';
 
-        if (convidados.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Nenhum convidado encontrado.</td></tr>`;
+        if(convidados.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Nenhum convidado encontrado.</td></tr>`;
             return;
         }
-
+        
         convidados.forEach(c => {
-            // Contagem segura dos acompanhantes
-            const numAcompanhantes = Array.isArray(c.acompanhantes) ? c.acompanhantes.length : 0;
-
-            // Define o design visual baseado no número de acompanhantes
-            const badgeClass = numAcompanhantes > 0 ? 'bg-info text-dark' : 'bg-light text-secondary border';
-            const nomesTooltip = numAcompanhantes > 0 ? c.acompanhantes.map(a => `${a.nome} ${a.sobrenome}`).join(', ') : 'Nenhum acompanhante';
-
-            // ==========================================
-            // LÓGICA DO BOTÃO DE CHECK-IN ATUALIZADA
-            // ==========================================
-            const jaEntrou = c.ja_entrou === 1;
-            const btnClass = jaEntrou ? 'btn-secondary' : 'btn-success';
-            const btnText = jaEntrou ? 'Entrada Registada' : '<i class="bi bi-check2-circle"></i> Confirmar Entrada';
-            const btnDisabled = jaEntrou ? 'disabled' : ''; // Desativa o botão se já tiver entrado
-
             tbody.innerHTML += `
                 <tr>
                     <td class="fw-bold">${c.nome} ${c.sobrenome}</td>
                     <td>${c.cpf || 'N/A'}</td>
                     <td><span class="badge bg-secondary fs-6">Mesa ${c.numero_mesa}</span></td>
                     <td class="text-center">
-                        <span class="badge ${badgeClass} fs-6" title="${nomesTooltip}" style="cursor: help;">
-                            <i class="bi bi-people-fill"></i> ${numAcompanhantes}
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        <button class="btn ${btnClass} btn-sm" onclick="efetuarCheckin(${c.id_convidado}, this)" ${btnDisabled}>
-                            ${btnText}
+                        <button class="btn btn-success btn-sm" onclick="efetuarCheckin(${c.id_convidado}, this)">
+                            <i class="bi bi-check2-circle"></i> Confirmar Entrada
                         </button>
                     </td>
                 </tr>
@@ -69,7 +49,7 @@ async function buscarConvidados(termo) {
 }
 
 async function efetuarCheckin(id_convidado, btnElement) {
-    if (!currentUser) return;
+    if(!currentUser) return;
 
     btnElement.disabled = true;
     btnElement.innerHTML = "A processar...";
@@ -92,11 +72,11 @@ async function efetuarCheckin(id_convidado, btnElement) {
         } else {
             alert(result.erro || "Erro ao realizar check-in");
             btnElement.disabled = false;
-            btnElement.innerHTML = '<i class="bi bi-check2-circle"></i> Confirmar Entrada';
+            btnElement.innerHTML = "Confirmar Entrada";
         }
     } catch (error) {
         alert("Erro de comunicação com o servidor.");
         btnElement.disabled = false;
-        btnElement.innerHTML = '<i class="bi bi-check2-circle"></i> Confirmar Entrada';
+        btnElement.innerHTML = "Confirmar Entrada";
     }
-}   
+}
