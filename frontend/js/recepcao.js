@@ -2,7 +2,6 @@ let currentUser = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     currentUser = getUser();
-    // Proteção de rota
     if (!currentUser) {
         window.location.href = '../index.html';
         return;
@@ -11,7 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
     configurarNavbar('../index.html');
 
     if (currentUser.perfil === 'Admin') {
-        document.getElementById('admin-actions').classList.remove('d-none');
+        const adminActions = document.getElementById('admin-actions');
+        if (adminActions) adminActions.classList.remove('d-none');
     }
 
     buscarConvidados('');
@@ -24,6 +24,7 @@ async function buscarConvidados(termo) {
         const convidados = await response.json();
 
         const tbody = document.getElementById('tabela-recepcao');
+        if (!tbody) return;
         tbody.innerHTML = '';
 
         if (convidados.length === 0) {
@@ -32,20 +33,20 @@ async function buscarConvidados(termo) {
         }
 
         convidados.forEach(c => {
-            // Contagem segura dos acompanhantes
             const numAcompanhantes = Array.isArray(c.acompanhantes) ? c.acompanhantes.length : 0;
 
-            // Define o design visual baseado no número de acompanhantes
+            // Estilo do badge baseado em ter ou não acompanhantes
             const badgeClass = numAcompanhantes > 0 ? 'bg-info text-dark' : 'bg-light text-secondary border';
-            const nomesTooltip = numAcompanhantes > 0 ? c.acompanhantes.map(a => `${a.nome} ${a.sobrenome}`).join(', ') : 'Nenhum acompanhante';
 
-            // ==========================================
-            // LÓGICA DO BOTÃO DE CHECK-IN ATUALIZADA
-            // ==========================================
+            // Texto para o Tooltip (ao passar o mouse)
+            const nomesTooltip = numAcompanhantes > 0
+                ? c.acompanhantes.map(a => `${a.nome} ${a.sobrenome}`).join(', ')
+                : 'Nenhum acompanhante';
+
             const jaEntrou = c.ja_entrou === 1;
             const btnClass = jaEntrou ? 'btn-secondary' : 'btn-success';
             const btnText = jaEntrou ? 'Entrada Registada' : '<i class="bi bi-check2-circle"></i> Confirmar Entrada';
-            const btnDisabled = jaEntrou ? 'disabled' : ''; // Desativa o botão se já tiver entrado
+            const btnDisabled = jaEntrou ? 'disabled' : '';
 
             tbody.innerHTML += `
                 <tr>
@@ -53,7 +54,7 @@ async function buscarConvidados(termo) {
                     <td>${c.cpf || 'N/A'}</td>
                     <td><span class="badge bg-secondary fs-6">Mesa ${c.numero_mesa}</span></td>
                     <td class="text-center">
-                        <span class="badge ${badgeClass} fs-6" title="${nomesTooltip}" style="cursor: help;">
+                        <span class="badge ${badgeClass} fs-6" title="${nomesTooltip}" style="cursor: help; padding: 8px 12px;">
                             <i class="bi bi-people-fill"></i> ${numAcompanhantes}
                         </span>
                     </td>
@@ -65,20 +66,23 @@ async function buscarConvidados(termo) {
                 </tr>
             `;
         });
-    } catch (error) { console.error("Erro na busca:", error); }
+    } catch (error) {
+        console.error("Erro na busca:", error);
+    }
 }
 
 async function efetuarCheckin(id_convidado, btnElement) {
     if (!currentUser) return;
 
     btnElement.disabled = true;
+    const originalContent = btnElement.innerHTML;
     btnElement.innerHTML = "A processar...";
 
     try {
         const response = await fetch(`${API_CHECKINS}/checkin`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_usuario: currentUser.id, id_convidado: id_convidado })
+            body: JSON.stringify({ id_usuario: currentUser.id_usuario || currentUser.id, id_convidado: id_convidado })
         });
 
         const result = await response.json();
@@ -92,11 +96,11 @@ async function efetuarCheckin(id_convidado, btnElement) {
         } else {
             alert(result.erro || "Erro ao realizar check-in");
             btnElement.disabled = false;
-            btnElement.innerHTML = '<i class="bi bi-check2-circle"></i> Confirmar Entrada';
+            btnElement.innerHTML = originalContent;
         }
     } catch (error) {
         alert("Erro de comunicação com o servidor.");
         btnElement.disabled = false;
-        btnElement.innerHTML = '<i class="bi bi-check2-circle"></i> Confirmar Entrada';
+        btnElement.innerHTML = originalContent;
     }
-}   
+}
