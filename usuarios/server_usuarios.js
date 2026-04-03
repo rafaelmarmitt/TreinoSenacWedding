@@ -16,11 +16,6 @@ const dbConfig = {
     password: process.env.DB_PASS,
     database: process.env.DB_NAME
 };
-
-// ==========================================
-// FUNÇÃO PROFISSIONAL DE AUTO-SEEDING
-// Garante que os utilizadores existem e o hash é 100% válido
-// ==========================================
 async function inicializarBancoDeDados() {
     try {
         const connection = await mysql.createConnection(dbConfig);
