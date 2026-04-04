@@ -80,7 +80,7 @@ window.adicionarCampoAcompanhante = (dados = null) => {
     document.getElementById('acompanhantes-container').insertAdjacentHTML('beforeend', `
         <div class="row mb-2 acompanhante-item align-items-center">
             <div class="col-md-5"><input type="text" class="form-control form-control-sm acomp-nome" placeholder="Nome" required value="${dados?.nome || ''}"></div>
-            <div class="col-md-5"><input type="text" class="form-control form-control-sm acomp-sobrenome" placeholder="Apelido" required value="${dados?.sobrenome || ''}"></div>
+            <div class="col-md-5"><input type="text" class="form-control form-control-sm acomp-sobrenome" placeholder="Sobrenome" required value="${dados?.sobrenome || ''}"></div>
             <div class="col-md-2 text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.acompanhante-item').remove()" title="Remover"><i class="bi bi-trash"></i></button></div>
         </div>
     `);
