@@ -4,6 +4,7 @@ cors = require('cors'),
 mysql = require('mysql2/promise'), 
 bcrypt = require('bcrypt'), 
 jwt = require('jsonwebtoken');
+
 const app = express();
 
 app.use(cors(), express.json());
@@ -54,7 +55,10 @@ app.post('/login', async (req, res) => {
             { expiresIn: '8h' });
         return res.json({
             mensagem: 'Login efetuado com sucesso!',
-            token, usuario: { id: usuario.id_usuario, nome: usuario.nome, perfil: usuario.perfil }
+            token, usuario: { 
+                id: usuario.id_usuario, 
+                nome: usuario.nome, 
+                perfil: usuario.perfil }
         });
     } catch (error) {
         console.error('Erro no login:', error);
@@ -62,5 +66,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-inicializarBancoDeDados().then(() => app.listen(process.env.PORT || 3001, () =>
-    console.log(`[Usuários] Servidor a correr na porta ${process.env.PORT || 3001}`)));
+inicializarBancoDeDados().then(() => 
+    app.listen(process.env.PORT || 3001, () =>
+    console.log(`[Usuários] Servidor a correr na porta ${process.env.PORT || 3001}`)
+));
