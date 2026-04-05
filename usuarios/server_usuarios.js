@@ -4,7 +4,12 @@ const app = express();
 
 app.use(cors(), express.json());
 
-const dbConfig = { host: process.env.DB_HOST || 'localhost', user: process.env.DB_USER || 'root', password: process.env.DB_PASS || '', database: process.env.DB_NAME || 'db_usuarios' };
+const dbConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASS || '',
+    database: process.env.DB_NAME || 'db_usuarios'
+};
 
 // Função profissional de auto-seeding
 async function inicializarBancoDeDados() {
@@ -36,12 +41,22 @@ app.post('/login', async (req, res) => {
 
         if (!usuario || !(await bcrypt.compare(senha, usuario.senha))) return res.status(401).json({ erro: 'Credenciais inválidas.' });
 
-        const token = jwt.sign({ id_usuario: usuario.id_usuario, perfil: usuario.perfil, nome: usuario.nome }, process.env.JWT_SECRET || 'Chav3S3cr3t4W3dd1ngP4ss2026!', { expiresIn: '8h' });
-        return res.json({ mensagem: 'Login efetuado com sucesso!', token, usuario: { id: usuario.id_usuario, nome: usuario.nome, perfil: usuario.perfil } });
+        const token = jwt.sign({
+            id_usuario: usuario.id_usuario,
+            perfil: usuario.perfil,
+            nome: usuario.nome
+        },
+            process.env.JWT_SECRET || 'Chav3S3cr3t4W3dd1ngP4ss2026!',
+            { expiresIn: '8h' });
+        return res.json({
+            mensagem: 'Login efetuado com sucesso!',
+            token, usuario: { id: usuario.id_usuario, nome: usuario.nome, perfil: usuario.perfil }
+        });
     } catch (error) {
         console.error('Erro no login:', error);
         return res.status(500).json({ erro: 'Erro interno no servidor.' });
     }
 });
 
-inicializarBancoDeDados().then(() => app.listen(process.env.PORT || 3001, () => console.log(`[Usuários] Servidor a correr na porta ${process.env.PORT || 3001}`)));
+inicializarBancoDeDados().then(() => app.listen(process.env.PORT || 3001, () =>
+    console.log(`[Usuários] Servidor a correr na porta ${process.env.PORT || 3001}`)));
