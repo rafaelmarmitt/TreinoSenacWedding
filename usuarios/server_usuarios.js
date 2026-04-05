@@ -18,7 +18,7 @@ async function inicializarBancoDeDados() {
         const [[{ total }]] = await conn.execute('SELECT COUNT(*) as total FROM usuarios');
 
         if (total === 0) {
-            console.log('[Auto-Seed] Tabela vazia detetada. A criar utilizadores padrão...');
+            console.log('[Auto-Seed] Tabela vazia detectada. A criar utilizadores padrão...');
             const hash = await bcrypt.hash('123456', 10);
             await conn.execute('INSERT INTO usuarios (nome, cpf, email, senha, perfil) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)', ['Administrador Geral', '111.111.111-11', 'admin@weddingpass.com', hash, 'Admin', 'Maria Cerimonialista', '222.222.222-22', 'maria@weddingpass.com', hash, 'Cerimonialista']);
             console.log('[Auto-Seed] Utilizadores criados com sucesso! (Senha: 123456)');
