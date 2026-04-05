@@ -46,7 +46,7 @@ app.post('/login', async (req, res) => {
             perfil: usuario.perfil,
             nome: usuario.nome
         },
-            process.env.JWT_SECRET || 'Chav3S3cr3t4W3dd1ngP4ss2026!',
+            process.env.JWT_SECRET || 'senhaSecreta',
             { expiresIn: '8h' });
         return res.json({
             mensagem: 'Login efetuado com sucesso!',
