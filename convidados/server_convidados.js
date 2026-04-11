@@ -1,18 +1,11 @@
 require('dotenv').config();
-const express = require('express'), 
-cors = require('cors'), 
-mysql = require('mysql2/promise');
-
+const express = require('express'), cors = require('cors'), mysql = require('mysql2/promise');
+const cpfLib = require('js-cpf-validation');
 const app = express();
 
 app.use(cors(), express.json());
 
-const dbConfig = { 
-    host: process.env.DB_HOST || 'localhost', 
-    user: process.env.DB_USER || 'root', 
-    password: process.env.DB_PASS || '', 
-    database: process.env.DB_NAME || 'db_convidados' 
-};
+const dbConfig = { host: process.env.DB_HOST || 'localhost', user: process.env.DB_USER || 'root', password: process.env.DB_PASS || '', database: process.env.DB_NAME || 'db_convidados' };
 
 // Obter todos os convidados e os seus respetivos acompanhantes
 app.get('/convidados', async (req, res) => {
@@ -43,6 +36,11 @@ app.get('/convidados', async (req, res) => {
 // Registar novo convidado e seus acompanhantes
 app.post('/convidados', async (req, res) => {
     const { nome, sobrenome, cpf, telefone, email, numero_mesa, acompanhantes } = req.body;
+
+    if (cpf && !cpfLib.isCPF(cpf)) {
+        return res.status(400).json({ erro: 'O CPF introduzido é inválido. Verifique os números.' });
+    }
+
     let conn;
     try {
         conn = await mysql.createConnection(dbConfig);
@@ -55,6 +53,10 @@ app.post('/convidados', async (req, res) => {
         return res.status(201).json({ mensagem: 'Convidado registado!', id: insertId });
     } catch (error) {
         if (conn) await conn.rollback();
+
+        if (error.code === 'ER_DUP_ENTRY' && error.message.includes('cpf')) {
+            return res.status(409).json({ erro: 'Este CPF já está cadastrado para outro convidado.' });
+        }
         return res.status(500).json({ erro: 'Erro ao registar convidado.' });
     } finally {
         if (conn) await conn.end();
@@ -65,6 +67,11 @@ app.post('/convidados', async (req, res) => {
 app.put('/convidados/:id', async (req, res) => {
     const { id } = req.params;
     const { nome, sobrenome, cpf, telefone, email, numero_mesa, acompanhantes } = req.body;
+
+    if (cpf && !cpfLib.isCPF(cpf)) {
+        return res.status(400).json({ erro: 'O CPF introduzido é inválido. Verifique os números.' });
+    }
+
     let conn;
     try {
         conn = await mysql.createConnection(dbConfig);
@@ -79,6 +86,9 @@ app.put('/convidados/:id', async (req, res) => {
         return res.json({ mensagem: 'Convidado atualizado com sucesso!' });
     } catch (error) {
         if (conn) await conn.rollback();
+        if (error.code === 'ER_DUP_ENTRY' && error.message.includes('cpf')) {
+            return res.status(409).json({ erro: 'Este CPF já está a ser utilizado por outro convidado.' });
+        }
         console.error('Erro ao editar:', error);
         return res.status(500).json({ erro: 'Erro ao atualizar convidado.' });
     } finally {
