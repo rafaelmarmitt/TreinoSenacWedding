@@ -41,7 +41,7 @@ app.get('/convidados', async (req, res) => {
 app.post('/convidados', async (req, res) => {
     const { nome, sobrenome, cpf, telefone, email, numero_mesa, acompanhantes } = req.body;
 
-    if (cpf && !cpfLib.isCPF(cpf)) {
+    if (cpf && !cpfLib.isValidCPF(cpf)) {
         return res.status(400).json({ erro: 'O CPF introduzido é inválido. Verifique os números.' });
     }
 
@@ -72,7 +72,7 @@ app.put('/convidados/:id', async (req, res) => {
     const { id } = req.params;
     const { nome, sobrenome, cpf, telefone, email, numero_mesa, acompanhantes } = req.body;
 
-    if (cpf && !cpfLib.isCPF(cpf)) {
+    if (cpf && !cpfLib.isValidCPF(cpf)) {
         return res.status(400).json({ erro: 'O CPF introduzido é inválido. Verifique os números.' });
     }
 

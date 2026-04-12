@@ -47,8 +47,18 @@ async function carregarGraficoEstatisticas() {
 
         graficoInstance = new Chart(ctx, {
             type: 'doughnut',
-            data: { labels: ['Presentes', 'Ausentes'], datasets: [{ data: [p, a], backgroundColor: ['#198754', '#dc3545'], borderWidth: 0 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            data: {
+                labels: ['Presentes', 'Ausentes'],
+                datasets: [{
+                    data: [p, a],
+                    backgroundColor: ['#198754', '#dc3545'], borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
         });
     } catch (error) { console.error("Erro nas estatísticas:", error); }
 }
@@ -129,14 +139,24 @@ async function cadastrarConvidado(e) {
     msgDiv.className = 'd-none';
 
     const dados = {
-        nome: document.getElementById('cad-nome').value, sobrenome: document.getElementById('cad-sobrenome').value,
-        cpf: document.getElementById('cad-cpf').value, telefone: document.getElementById('cad-telefone').value,
-        email: document.getElementById('cad-email').value, numero_mesa: document.getElementById('cad-mesa').value,
-        acompanhantes: Array.from(document.querySelectorAll('.acompanhante-item')).map(el => ({ nome: el.querySelector('.acomp-nome').value, sobrenome: el.querySelector('.acomp-sobrenome').value }))
+        nome: document.getElementById('cad-nome').value,
+        sobrenome: document.getElementById('cad-sobrenome').value,
+        cpf: document.getElementById('cad-cpf').value,
+        telefone: document.getElementById('cad-telefone').value,
+        email: document.getElementById('cad-email').value,
+        numero_mesa: document.getElementById('cad-mesa').value,
+        acompanhantes: Array.from(document.querySelectorAll('.acompanhante-item')).map(el => ({
+            nome: el.querySelector('.acomp-nome').value,
+            sobrenome: el.querySelector('.acomp-sobrenome').value
+        }))
     };
 
     try {
-        const res = await fetch(`${API_CONVIDADOS}/convidados${idEdicao ? `/${idEdicao}` : ''}`, { method: idEdicao ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+        const res = await fetch(`${API_CONVIDADOS}/convidados${idEdicao ? `/${idEdicao}` : ''}`, {
+            method: idEdicao ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
         if (!res.ok) return showError((await res.json()).erro || 'Erro ao processar a requisição.');
         carregarConvidadosAdmin(); carregarGraficoEstatisticas();
         bootstrap.Modal.getInstance(document.getElementById('modalNovoConvidado'))?.hide();
@@ -158,8 +178,22 @@ window.gerarPDF = () => {
     doc.autoTable({
         head: [["Convidado (e Acompanhantes)", "Mesa", "Status"]],
         body: convidadosCache.map(c => [`${c.nome} ${c.sobrenome}${c.acompanhantes?.length ? '\n' + c.acompanhantes.map(a => `- ${a.nome} ${a.sobrenome}`).join('\n') : ''}`, `Mesa ${c.numero_mesa}`, c.ja_entrou ? "PRESENTE" : "AUSENTE"]),
-        startY: 65, theme: 'grid', headStyles: { fillColor: [214, 51, 132], halign: 'center' }, columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'center' }, 2: { halign: 'center', fontStyle: 'bold' } },
-        didParseCell: (d) => { if (d.section === 'body' && d.column.index === 2) d.cell.styles.textColor = d.cell.raw === "PRESENTE" ? [25, 135, 84] : [220, 53, 69]; },
+        startY: 65, theme: 'grid', headStyles: {
+            fillColor: [214, 51, 132],
+            halign: 'center'
+        },
+        columnStyles: {
+            0: { cellWidth: 100 },
+            1: { halign: 'center' },
+            2: {
+                halign: 'center',
+                fontStyle: 'bold'
+            }
+        },
+        didParseCell: (d) => {
+            if (d.section === 'body' && d.column.index === 2)
+                d.cell.styles.textColor = d.cell.raw === "PRESENTE" ? [25, 135, 84] : [220, 53, 69];
+        },
         styles: { fontSize: 9, cellPadding: 3 }
     });
 
