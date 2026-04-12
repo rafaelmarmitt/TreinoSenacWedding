@@ -1,6 +1,7 @@
 {
   "name": "checkins",
   "version": "1.0.0",
+  "type":"module",
   "description": "",
   "main": "server_checkins.js",
   "scripts": {
