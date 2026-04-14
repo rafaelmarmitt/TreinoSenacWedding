@@ -1,6 +1,6 @@
 let currentUser = null;
 
-// Inicialização da página e verificação de acesso
+// Inicialização da página
 document.addEventListener("DOMContentLoaded", () => {
     if (!(currentUser = getUser())) return window.location.href = '../index.html';
 
@@ -10,6 +10,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (adminActions) adminActions.classList.toggle('d-none', currentUser.perfil !== 'Admin');
 
     buscarConvidados('');
+
+    // Eventos do Modal de Cadastro
+    document.getElementById('form-novo-convidado')?.addEventListener('submit', cadastrarConvidado);
+    document.getElementById('modalNovoConvidado')?.addEventListener('hidden.bs.modal', () => {
+        document.getElementById('form-novo-convidado').reset();
+        document.getElementById('acompanhantes-container').innerHTML = '';
+        document.getElementById('cadastro-msg').className = 'd-none';
+    });
 });
 
 // Busca e listagem de convidados
@@ -20,11 +28,11 @@ async function buscarConvidados(termo) {
         const tbody = document.getElementById('tabela-recepcao');
         if (!tbody) return;
 
-        if (!convidados.length) return tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Nenhum convidado encontrado.</td></tr>`;
+        if (!convidados.length) return tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Nenhum convidado encontrado.</td></tr>`;
 
         tbody.innerHTML = convidados.map(c => {
             const num = c.acompanhantes?.length || 0;
-            const entrou = c.ja_entrou === 1;
+            const entrou = c.ja_entrou === 1 || c.ja_entrou === true;
 
             return `
                 <tr>
@@ -57,13 +65,8 @@ async function efetuarCheckin(id_convidado, btn) {
     btn.innerHTML = "Processando...";
 
     try {
-        const res =
-            await fetch(`${API_CHECKINS}/checkin`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id_usuario: currentUser.id_usuario || currentUser.id, id_convidado })
-                });
+        const res = await fetch(`${API_CHECKINS}/checkin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_usuario: currentUser.id_usuario || currentUser.id, id_convidado }) });
+
         if (res.ok) return (btn.classList.replace('btn-success', 'btn-secondary'), btn.innerHTML = "Entrada Registrada");
         if (res.status === 409) return (btn.classList.replace('btn-success', 'btn-warning'), btn.innerHTML = "Já efetuou check-in");
 
@@ -75,4 +78,51 @@ async function efetuarCheckin(id_convidado, btn) {
 
     btn.disabled = false;
     btn.innerHTML = htmlOrig;
+}
+
+// ==========================================
+// FUNÇÕES DE CADASTRO (Reaproveitadas do Admin)
+// ==========================================
+
+// Adiciona campos dinâmicos de acompanhantes no modal
+window.adicionarCampoAcompanhante = () => {
+    document.getElementById('acompanhantes-container').insertAdjacentHTML('beforeend', `
+        <div class="row mb-2 acompanhante-item align-items-center">
+            <div class="col-md-5"><input type="text" class="form-control form-control-sm acomp-nome" placeholder="Nome" required></div>
+            <div class="col-md-5"><input type="text" class="form-control form-control-sm acomp-sobrenome" placeholder="Apelido" required></div>
+            <div class="col-md-2 text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.acompanhante-item').remove()" title="Remover"><i class="bi bi-trash"></i></button></div>
+        </div>
+    `);
+};
+
+// Envia o formulário de novo convidado
+async function cadastrarConvidado(e) {
+    e.preventDefault();
+    const msgDiv = document.getElementById('cadastro-msg');
+    const showError = (msg) => (msgDiv.innerText = msg, msgDiv.className = 'text-danger text-center mt-2 d-block');
+    msgDiv.className = 'd-none';
+
+    const dados = {
+        nome: document.getElementById('cad-nome').value,
+        sobrenome: document.getElementById('cad-sobrenome').value,
+        cpf: document.getElementById('cad-cpf').value,
+        telefone: document.getElementById('cad-telefone').value,
+        email: document.getElementById('cad-email').value,
+        numero_mesa: document.getElementById('cad-mesa').value,
+        acompanhantes: Array.from(document.querySelectorAll('.acompanhante-item')).map(el => ({
+            nome: el.querySelector('.acomp-nome').value,
+            sobrenome: el.querySelector('.acomp-sobrenome').value
+        }))
+    };
+
+    try {
+        const res = await fetch(`${API_CONVIDADOS}/convidados`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+        if (!res.ok) return showError((await res.json()).erro || 'Erro ao criar convidado.');
+        buscarConvidados(document.getElementById('busca-recepcao')?.value || '');
+        bootstrap.Modal.getInstance(document.getElementById('modalNovoConvidado'))?.hide();
+    } catch (error) { showError('Falha de comunicação com o servidor.'); }
 }
